@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Global AQI Globe</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      color: white;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+    #globeViz {
+      width: 100vw;
+      height: 100vh;
+    }
+    #status {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.6);
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      z-index: 10;
+    }
+  </style>
+
+  <!-- Correct libraries -->
+  <script src="https://unpkg.com/three@0.150.1/build/three.min.js"></script>
+  <script src="https://unpkg.com/three-globe@2.32.1/dist/three-globe.min.js"></script>
+</head>
+<body>
+
+<div id="globeViz"></div>
+<div id="status">Initializing...</div>
+
+<script>
+  // AQI color scale
+  function getAQIColor(aqi) {
+    if (aqi <= 50) return '#00ff00';
+    if (aqi <= 100) return '#ffff00';
+    if (aqi <= 150) return '#ff7e00';
+    if (aqi <= 200) return '#ff0000';
+    return '#8f3f97';
+  }
+
+  const globeContainer = document.getElementById('globeViz');
+
+  // Globe init
+  const globe = Globe()(globeContainer)
+    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
+    .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+    .pointRadius(0.35)
+    .pointAltitude(0.01)
+    .pointColor(d => getAQIColor(d.aqi))
+    .pointLabel(d => `
+      <div>
+        <b>${d.name}</b><br/>
+        AQI: <span style="color:${getAQIColor(d.aqi)}">${d.aqi}</span>
+      </div>
+    `);
+
+  globe.controls().autoRotate = true;
+  globe.controls().autoRotateSpeed = 0.6;
+
+  globe.width([window.innerWidth]);
+  globe.height([window.innerHeight]);
+
+  // TEST DATA (globe works instantly)
+  const testPoints = [
+    { lat: 37.77, lng: -122.42, aqi: 45, name: 'San Francisco' },
+    { lat: 28.6, lng: 77.2, aqi: 190, name: 'Delhi' },
+    { lat: 51.5, lng: -0.1, aqi: 70, name: 'London' },
+    { lat: 35.68, lng: 139.69, aqi: 100, name: 'Tokyo' }
+  ];
+
+  globe.pointsData(testPoints);
+  document.getElementById('status').innerText = 'Globe loaded ✔';
+
+</script>
+
+</body>
+</html>
