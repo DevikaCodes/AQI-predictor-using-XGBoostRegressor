@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Air Guard - Global Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.32.1/dist/globe.gl.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #020712;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+    }
+    #globeViz {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+    #ui-overlay {
+      position: absolute;
+      top: 25px;
+      left: 25px;
+      z-index: 100;
+      color: white;
+    }
+    .glass-panel {
+      background: rgba(13, 25, 48, 0.85);
+      backdrop-filter: blur(12px);
+      padding: 22px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+      width: 340px;
+    }
+    .search-container {
+      display: flex;
+      gap: 8px;
+      margin-top: 15px;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      font-size: 14px;
+      outline: none;
+    }
+    button {
+      padding: 10px 18px;
+      background: #00f2ff;
+      border: none;
+      border-radius: 8px;
+      color: #040d21;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #38f8ff; }
+    #status {
+      font-size: 13px;
+      color: #00f2ff;
+      margin-top: 10px;
+    }
+    #legend {
+      position: absolute;
+      bottom: 25px;
+      right: 25px;
+      z-index: 100;
+      color: white;
+      font-size: 12px;
+      width: auto;
+    }
+    .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; }
+  </style>
+</head>
+<body>
+
+  <div id="globeViz"></div>
+
+  <div id="ui-overlay">
+    <div class="glass-panel">
+      <h1 style="margin: 0; letter-spacing: 2px; color: #00f2ff; font-size: 22px;">AI AIR GUARD</h1>
+      <p style="opacity: 0.8; margin: 4px 0 0 0; font-size: 13px;">Real-Time ML Air Quality Predictor</p>
+      
+      <div class="search-container">
+        <input type="text" id="cityInput" placeholder="Enter city (e.g. Kochi, Delhi)">
+        <button onclick="goToDetails()">Check</button>
+      </div>
+      <div id="status">Globe ready ✔</div>
+    </div>
+  </div>
+
+  <div id="legend" class="glass-panel">
+    <div class="legend-item"><div class="dot" style="background: #00ff00;"></div> Good (0-50)</div>
+    <div class="legend-item"><div class="dot" style="background: #ffff00;"></div> Moderate (51-100)</div>
+    <div class="legend-item"><div class="dot" style="background: #ff7e00;"></div> Sensitive (101-150)</div>
+    <div class="legend-item"><div class="dot" style="background: #ff0000;"></div> Unhealthy (151-200)</div>
+    <div class="legend-item"><div class="dot" style="background: #8f3f97;"></div> Hazardous (201+)</div>
+  </div>
+
+  <script>
+    // Initialize Globe
+    window.onload = () => {
+      const globe = Globe()(document.getElementById('globeViz'))
+        .globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg')
+        .backgroundImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png')
+        .width(window.innerWidth)
+        .height(window.innerHeight);
+
+      globe.controls().autoRotate = true;
+      globe.controls().autoRotateSpeed = 0.5;
+
+      window.addEventListener('resize', () => {
+        globe.width(window.innerWidth);
+        globe.height(window.innerHeight);
+      });
+    };
+
+    function goToDetails() {
+      const city = document.getElementById('cityInput').value.trim();
+      if (!city) return;
+      document.getElementById('status').innerText = `Routing to ${city}...`;
+      window.location.href = `details.html?city=${encodeURIComponent(city)}`;
+    }
+
+    document.getElementById('cityInput').addEventListener('keypress', e => {
+      if (e.key === 'Enter') goToDetails();
+    });
+  </script>
+</body>
+</html>
