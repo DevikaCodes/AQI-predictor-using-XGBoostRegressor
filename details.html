@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Air Quality Analysis - AI Air Guard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 40px 20px;
+      background: #020712;
+      color: #ffffff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+    }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+    }
+
+    .back-btn {
+      padding: 8px 18px;
+      background: transparent;
+      border: 1px solid #00f2ff;
+      border-radius: 8px;
+      color: #00f2ff;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .back-btn:hover {
+      background: #00f2ff;
+      color: #020712;
+    }
+
+    .glass-card {
+      background: rgba(13, 25, 48, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    .metric-card {
+      background: rgba(4, 13, 33, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+    }
+
+    .metric-label {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #8892b0;
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-size: 38px;
+      font-weight: 700;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: bold;
+      margin-top: 6px;
+      text-transform: uppercase;
+    }
+
+    .dominant-box {
+      border-left: 4px solid #ff4d4d;
+      text-align: left;
+    }
+
+    .dominant-name {
+      color: #ff4d4d;
+      font-size: 26px;
+      font-weight: bold;
+    }
+
+    .chart-box {
+      height: 320px;
+      position: relative;
+    }
+
+    #loading {
+      font-size: 18px;
+      color: #00f2ff;
+      text-align: center;
+      margin-top: 100px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading">Retrieving atmosphere telemetry...</div>
+
+  <div class="container" id="content" style="display: none;">
+    <div class="header-bar">
+      <div>
+        <h1 id="cityName" style="margin: 0; color: #00f2ff; font-size: 28px;">City Report</h1>
+        <p style="margin: 4px 0 0 0; color: #8892b0; font-size: 14px;">Live AQI & Pollutant Concentration Analysis</p>
+      </div>
+      <a href="index.html" class="back-btn">← Back to Globe</a>
+    </div>
+
+    <!-- Cards Row -->
+    <div class="metrics-grid">
+      <!-- AQI Metric -->
+      <div class="metric-card">
+        <div class="metric-label">Predicted AQI</div>
+        <div class="metric-value" id="aqiVal">--</div>
+        <div class="badge" id="statusBadge">--</div>
+      </div>
+
+      <!-- Dominant Pollutant Box -->
+      <div class="metric-card dominant-box">
+        <div class="metric-label">Highest Primary Pollutant</div>
+        <div class="dominant-name" id="dominantPollutant">--</div>
+        <div style="font-size: 13px; color: #aaa; margin-top: 4px;" id="dominantValue">Concentration: --</div>
+      </div>
+    </div>
+
+    <!-- Concentration Chart Card -->
+    <div class="glass-card">
+      <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #00f2ff; letter-spacing: 1px;">
+        POLLUTANT CONCENTRATION BREAKDOWN
+      </h3>
+      <div class="chart-box">
+        <canvas id="concentrationChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const aqiTheme = aqi => {
+      if (aqi <= 50) return { color: '#00ff00', bg: 'rgba(0, 255, 0, 0.15)', text: 'Good' };
+      if (aqi <= 100) return { color: '#ffff00', bg: 'rgba(255, 255, 0, 0.15)', text: 'Moderate' };
+      if (aqi <= 150) return { color: '#ff7e00', bg: 'rgba(255, 126, 0, 0.15)', text: 'Sensitive' };
+      if (aqi <= 200) return { color: '#ff0000', bg: 'rgba(255, 0, 0, 0.15)', text: 'Unhealthy' };
+      return { color: '#8f3f97', bg: 'rgba(143, 63, 151, 0.25)', text: 'Hazardous' };
+    };
+
+    async function loadData() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const city = urlParams.get('city');
+
+      if (!city) {
+        document.getElementById('loading').innerText = "No city specified. Redirecting...";
+        setTimeout(() => window.location.href = "index.html", 1500);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/predict?city=${encodeURIComponent(city)}`);
+        if (!res.ok) throw new Error("City telemetry could not be loaded.");
+
+        const data = await res.json();
+        const theme = aqiTheme(data.aqi);
+
+        // Populate text metrics
+        document.getElementById('cityName').innerText = data.name;
+        document.getElementById('aqiVal').innerText = data.aqi;
+        document.getElementById('aqiVal').style.color = theme.color;
+
+        const badge = document.getElementById('statusBadge');
+        badge.innerText = data.status;
+        badge.style.color = theme.color;
+        badge.style.background = theme.bg;
+
+        document.getElementById('dominantPollutant').innerText = data.dominant_pollutant;
+        document.getElementById('dominantValue').innerText = `Observed Level: ${data.dominant_value}`;
+
+        // Render Bar Chart
+        // Render Chart as AQI Impact / Sub-Index
+const ctx = document.getElementById('concentrationChart').getContext('2d');
+new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: Object.keys(data.sub_indices),
+    datasets: [{
+      label: 'Pollutant Sub-Index',
+      data: Object.values(data.sub_indices),
+      backgroundColor: Object.values(data.sub_indices).map(val => 
+        val > 200 ? '#8f3f97' : val > 100 ? '#ff4d4d' : val > 50 ? '#fbbf24' : '#00f2ff'
+      ),
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` Sub-Index: ${ctx.raw} (Raw: ${data.components[ctx.label]} ${ctx.label === 'CO' ? 'mg/m³' : 'µg/m³'})`
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: 'rgba(255, 255, 255, 0.08)' },
+        ticks: { color: '#ffffff', font: { size: 12, weight: 'bold' } }
+      },
+      y: {
+        grid: { color: 'rgba(255, 255, 255, 0.08)' },
+        ticks: { color: '#8892b0' },
+        title: { display: true, text: 'CPCB Sub-Index Value', color: '#8892b0' }
+      }
+    }
+  }
+});
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+
+      } catch (err) {
+        document.getElementById('loading').innerText = err.message;
+        document.getElementById('loading').style.color = "#ff4d4d";
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
